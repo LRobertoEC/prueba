@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración de Comentarios</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #F5F5DC;
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background-color: #722F37;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1, h2 {
+            margin: 0;
+        }
+        
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            box-sizing: border-box;
+            gap: 20px;
+        }
+        
+        .left-column {
+            width: 60%;
+        }
+        
+        .right-column {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .comment-card {
+            background-color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .name {
+            font-weight: bold;
+            color: #722F37;
+        }
+        
+        .rating {
+            color: #ffcd56;
+            margin: 10px 0;
+        }
+        
+        .comment-text {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .chart-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            height: 300px;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .stat-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex: 1;
+            text-align: center;
+        }
+        
+        .big-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #722F37;
+            margin: 10px 0 0;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .left-column, .right-column {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Panel de Comentarios</h1>
+    </div>
+
+    <div class="container">
+        <!-- Columna izquierda: Lista de comentarios -->
+        <div class="left-column">
+            <h2>Comentarios Recientes</h2>
+            
+            {% for comentario in comentarios %}
+            <div class="comment-card">
+                <div class="comment-header">
+                    <span class="name">{{ comentario.nombre }}</span>
+                    <span class="email">{{ comentario.email }}</span>
+                    <span class="date">{{ comentario.fecha.strftime('%d/%m/%Y %H:%M') }}</span>
+                </div>
+                <div class="rating">
+                    {% for i in range(1, 6) %}
+                        <i class="fas fa-star {% if i <= comentario.valoracion %}filled{% endif %}"></i>
+                    {% endfor %}
+                </div>
+                <p class="comment-text">{{ comentario.mensaje }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Columna derecha: Estadísticas -->
+        <div class="right-column">
+            <h2>Estadísticas de Satisfacción</h2>
+            
+            <div class="chart-container">
+                <canvas id="satisfactionChart"></canvas>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Promedio General</h3>
+                    <p class="big-number">{{ "%.1f"|format(promedio_general) }}/5</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Comentarios</h3>
+                    <p class="big-number">{{ total_comentarios }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('satisfactionChart');
+            const distributionData = JSON.parse('{{ distribucion_estrellas|tojson|safe }}');
+            
+            if (distributionData && distributionData.length === 5) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['1 Estrella', '2 Estrellas', '3 Estrellas', '4 Estrellas', '5 Estrellas'],
+                        datasets: [{
+                            data: distributionData,
+                            backgroundColor: [
+                                '#722F37', '#9e4a52', '#c67b83', '#e8acb4', '#f5d8db'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const value = context.raw || 0;
+                                        const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                        return `${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                ctx.innerHTML = '<p style="text-align: center; color: #666;">No hay datos suficientes</p>';
+            }
+        });
+    </script>
+</body>
+</html>
