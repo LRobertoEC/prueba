@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from urllib.parse import quote_plus
 import os
 
-def create_app():
+def wsgi:app():
     # Cargar variables de entorno
     load_dotenv()
 
@@ -174,3 +174,4 @@ app = create_app()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=False)
+
