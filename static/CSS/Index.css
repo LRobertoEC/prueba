@@ -1,0 +1,285 @@
+/* Estilos generales del cuerpo de la página */
+body {
+    margin: 0; /* Elimina los márgenes por defecto */
+    padding: 0; /* Elimina el padding por defecto */
+    font-family: Arial, sans-serif; /* Fuente principal */
+    background-color: #F5F5DC; /* Color de fondo: blanco hueso */
+    color: #333; /* Color de texto principal */
+}
+
+/* Estilos para el encabezado */
+.header {
+    background-color: #722F37; /* Color de fondo: vino */
+    color: white; /* Color de texto: blanco */
+    padding: 15px 20px; /* Espaciado interno */
+    text-align: center; /* Alineación del texto al centro */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Sombra para efecto elevado */
+}
+
+/* Contenedor principal flexible (para diseño de columnas) */
+.container {
+    display: flex; /* Activa el modelo flexbox */
+    padding: 20px; /* Espaciado interno */
+}
+
+/* Estilos para la columna izquierda */
+.left-column {
+    flex: 1; /* Ocupa 1 parte del espacio disponible */
+    padding: 15px; /* Espaciado interno */
+    background-color: #FFF; /* Fondo blanco */
+    border-radius: 5px; /* Bordes redondeados */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Sombra sutil */
+    margin-right: 20px; /* Margen a la derecha para separación */
+}
+
+/* Estilos para la columna derecha */
+.right-column {
+    flex: 1; /* Ocupa 1 parte del espacio disponible */
+    padding: 15px; /* Espaciado interno */
+    background-color: #FFF; /* Fondo blanco */
+    border-radius: 5px; /* Bordes redondeados */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Sombra sutil */
+    display: flex; /* Activa flexbox para alineación */
+    flex-direction: column; /* Disposición vertical */
+    align-items: center; /* Centrado horizontal */
+    justify-content: center; /* Centrado vertical */
+}
+
+/* Estilos para el título principal (h1) */
+h1 {
+    margin: 0; /* Elimina margen por defecto */
+    font-size: 24px; /* Tamaño de fuente */
+}
+
+/* Estilos para subtítulos (h2) */
+h2 {
+    color: #722F37; /* Color vino */
+    border-bottom: 1px solid #ddd; /* Borde inferior */
+    padding-bottom: 10px; /* Espaciado bajo el borde */
+}
+
+/* Estilos para la lista de temas */
+.topic-list {
+    list-style-type: none; /* Elimina viñetas de lista */
+    padding: 0; /* Elimina padding por defecto */
+}
+
+/* Estilos para elementos de la lista */
+.topic-list li {
+    padding: 10px 0; /* Espaciado vertical */
+    border-bottom: 1px solid #eee; /* Borde inferior sutil */
+}
+
+/* Elimina borde del último elemento de la lista */
+.topic-list li:last-child {
+    border-bottom: none;
+}
+
+/* Efecto hover para elementos de la lista */
+.topic-list li:hover {
+    background-color: #f9f9f9; /* Fondo gris claro al pasar el ratón */
+    cursor: pointer; /* Cambia el cursor a mano */
+}
+
+/* Contenedor para la imagen (placeholder) */
+.image-placeholder {
+    width: 100%; /* Ancho completo del contenedor padre */
+    height: 300px; /* Altura fija */
+    background-color: #f5f5f5; /* Fondo gris claro */
+    /*border: 2px dashed #ccc; /* Borde discontinuo */
+    display: flex; /* Flexbox para centrar contenido */
+    align-items: center; /* Centrado vertical */
+    justify-content: center; /* Centrado horizontal */
+    margin-bottom: 20px; /* Margen inferior */
+    color: #999; /* Color de texto gris */
+}
+
+/* Estilos responsivos para pantallas pequeñas */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column; /* Cambia a disposición vertical */
+    }
+    
+    .left-column {
+        margin-right: 0; /* Elimina margen derecho */
+        margin-bottom: 20px; /* Añade margen inferior */
+    }
+}
+
+/* Estilos específicos para imágenes en la columna derecha */
+.right-column img {
+    width: 100%; /* Ancho completo del contenedor */
+    height: 100%; /* Altura completa del contenedor */
+    object-fit: contain; /* Mantiene proporción sin recortar */
+}
+
+/*-----------------------------------------------*/
+
+.comments-section {
+    background-color: #fff;
+    padding: 25px;
+    margin-top: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+.comments-section:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.comments-section h3 {
+    color: #722F37;
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f0;
+    font-size: 1.4em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555;
+    font-size: 0.95em;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+    font-size: 14px;
+    transition: all 0.3s;
+    background-color: #f9f9f9;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="email"]:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #722F37;
+    box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.1);
+    background-color: #fff;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 100px;
+    max-height: 200px;
+}
+
+.submit-btn {
+    background-color: #722F37;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    width: 100%;
+    box-shadow: 0 2px 5px rgba(114, 47, 55, 0.2);
+}
+
+.submit-btn:hover {
+    background-color: #5a252c;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(114, 47, 55, 0.3);
+}
+
+.submit-btn:active {
+    transform: translateY(0);
+}
+
+/* Efecto de carga al enviar */
+.submit-btn.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.submit-btn.loading:after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.comments-section {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-columns {
+    display: flex;
+    gap: 20px;
+}
+
+.left-column, .right-column {
+    flex: 1;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="text"],
+input[type="email"],
+textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+textarea {
+    height: 100%;
+    min-height: 100px;
+}
+
+.submit-btn {
+    background-color: #722F37;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.submit-btn:hover {
+    background-color: #722F37;
+}
