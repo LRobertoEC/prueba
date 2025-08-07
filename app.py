@@ -11,145 +11,166 @@ def create_app():
 
     app = Flask(__name__)
 
-    # Configuración de MongoDB
-    username = quote_plus(os.getenv('MONGO_USER', 'Roberto'))
-    password = quote_plus(os.getenv('MONGO_PASS', '12345'))
-    MONGO_URI = f"mongodb+srv://{username}:{password}@cluster0.vkow89i.mongodb.net/conferencia_joven?retryWrites=true&w=majority&authSource=admin"
-    DB_NAME = "conferencia_joven"
+    # Configuración mejorada de MongoDB con manejo de errores
+    def get_mongo_client():
+        try:
+            username = quote_plus(os.getenv('MONGO_USER', 'Roberto'))
+            password = quote_plus(os.getenv('MONGO_PASS', '12345'))
+            MONGO_URI = f"mongodb+srv://{username}:{password}@cluster0.vkow89i.mongodb.net/conferencia_joven?retryWrites=true&w=majority&authSource=admin"
+            
+            client = MongoClient(
+                MONGO_URI,
+                connectTimeoutMS=5000,
+                serverSelectionTimeoutMS=5000,
+                socketTimeoutMS=30000,  # Aumentado para operaciones
+                retryWrites=True,
+                retryReads=True
+            )
+            client.admin.command('ping')  # Test de conexión
+            return client
+        except Exception as e:
+            app.logger.error(f"Error de conexión a MongoDB: {str(e)}")
+            return None
 
-    # Conexión a MongoDB
-    try:
-        client = MongoClient(
-            MONGO_URI,
-            connectTimeoutMS=5000,
-            serverSelectionTimeoutMS=5000
-        )
-        client.admin.command('ping')
-        db = client[DB_NAME]
-        feedback_collection = db['feedback']
-        print("✅ Conexión exitosa a MongoDB Atlas")
-    except Exception as e:
-        print(f"❌ Error de conexión a MongoDB: {str(e)}")
-        feedback_collection = None
+    # Conexión inicial
+    mongo_client = get_mongo_client()
+    feedback_collection = mongo_client["conferencia_joven"]["feedback"] if mongo_client else None
 
     # Ruta para manejar el feedback
     @app.route('/submit-feedback', methods=['POST'])
     def submit_feedback():
-        if feedback_collection is None:
-            return jsonify({'error': 'Error de conexión a la base de datos'}), 500
+        nonlocal feedback_collection
+        if not feedback_collection:
+            feedback_collection = get_mongo_client()["conferencia_joven"]["feedback"] if get_mongo_client() else None
+            if not feedback_collection:
+                return jsonify({'error': 'Error de conexión a la base de datos'}), 503
             
         try:
             data = request.get_json()
-            
+            if not data:
+                return jsonify({'error': 'Datos no proporcionados'}), 400
+                
             feedback_data = {
-                'nombre': data['nombre'],
-                'email': data['email'],
-                'valoracion': int(data['valoracion']),
-                'mensaje': data['mensaje'],
-                'fecha': datetime.now()
+                'nombre': data.get('nombre', 'Anónimo'),
+                'email': data.get('email', ''),
+                'valoracion': int(data.get('valoracion', 3)),
+                'mensaje': data.get('mensaje', ''),
+                'fecha': datetime.utcnow()  # Usamos UTC para consistencia
             }
             
             result = feedback_collection.insert_one(feedback_data)
-            return jsonify({'success': True, 'message': 'Feedback guardado exitosamente'}), 200
-                
+            return jsonify({
+                'success': True,
+                'message': 'Feedback guardado exitosamente',
+                'id': str(result.inserted_id)
+            }), 201
+            
+        except ValueError as e:
+            return jsonify({'error': 'Valoración inválida'}), 400
         except Exception as e:
-            print(f"Error al guardar feedback: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            app.logger.error(f"Error al guardar feedback: {str(e)}")
+            return jsonify({'error': 'Error interno del servidor'}), 500
 
-    # Ruta principal
+    # Rutas estáticas mejoradas con manejo de caché
     @app.route('/')
     def index():
-        return render_template('index.html')
+        return render_template('index.html'), 200, {
+            'Cache-Control': 'public, max-age=300'
+        }
 
-    # Rutas para páginas temáticas
-    @app.route('/buen-uso-de-las-redes-sociales')
-    def redes_sociales():
-        return render_template('Uso de redes sociales.html')
+    # Sistema de rutas dinámicas para páginas temáticas
+    topic_pages = {
+        'buen-uso-de-las-redes-sociales': 'Uso de redes sociales.html',
+        'relaciones-toxicas': 'Relaciones toxicas.html',
+        'efecto-de-las-redes-sociales-en-mi-autoestima': 'Efecto de las redes sociales en mi autoestima.html',
+        'amor-propio': 'Amor propio.html',
+        'rompiendo-cadenas': 'Rompiendo cadenas.html',
+        'violencia-digital-y-ley-olimpia': 'Violencia digital y Ley Olimpia.html',
+        'resiliencia-tu-fuerza-interior': 'Resilencia.html',
+        'feminismo-la-lucha-por-la-igualdad': 'Feminismo.html',
+        'cero-violencia-escolar': 'Cero violencia escolar.html',
+        'educacion-ambiental': 'Educación ambiental.html',
+        'fortalecimiento-y-empoderamiento-juvenil': 'Fortalecimiento y empoderamiento juvenil.html',
+        'comer-para-vivir': 'Comer para vivir.html'
+    }
 
-    @app.route('/relaciones-toxicas')
-    def relaciones_toxicas():
-        return render_template('Relaciones toxicas.html')
+    for route, template in topic_pages.items():
+        @app.route(f'/{route}')
+        def view(template=template):  # Capturamos el template en el closure
+            return render_template(template), 200, {
+                'Cache-Control': 'public, max-age=3600'
+            }
 
-    @app.route('/efecto-de-las-redes-sociales-en-mi-autoestima')
-    def redes_sociales_autoestima():
-        return render_template('Efecto de las redes sociales en mi autoestima.html')
-
-    @app.route('/amor-propio')
-    def amor_propio():
-        return render_template('Amor propio.html')
-
-    @app.route('/rompiendo-cadenas')
-    def rompiendo_cadenas():
-        return render_template('Rompiendo cadenas.html')
-
-    @app.route('/violencia-digital-y-ley-olimpia')
-    def violencia_digital():
-        return render_template('Violencia digital y Ley Olimpia.html')
-
-    @app.route('/resiliencia-tu-fuerza-interior')
-    def resiliencia():
-        return render_template('Resilencia.html')
-
-    @app.route('/feminismo-la-lucha-por-la-igualdad')
-    def feminismo():
-        return render_template('Feminismo.html')
-
-    @app.route('/cero-violencia-escolar')
-    def cero_violencia_escolar():
-        return render_template('Cero violencia escolar.html')
-
-    @app.route('/educacion-ambiental')
-    def educacion_ambiental():
-        return render_template('Educación ambiental.html')
-
-    @app.route('/fortalecimiento-y-empoderamiento-juvenil')
-    def empoderamiento_juvenil():
-        return render_template('Fortalecimiento y empoderamiento juvenil.html')
-
-    @app.route('/comer-para-vivir')
-    def alimentacion_saludable():
-        return render_template('Comer para vivir.html')
-
-    # Panel de administración
+    # Panel de administración con paginación
     @app.route('/admin-comentarios')
     def admin_comentarios():
-        if feedback_collection is None:
-            return "Error de conexión a la base de datos", 500
-            
+        nonlocal feedback_collection
+        if not feedback_collection:
+            feedback_collection = get_mongo_client()["conferencia_joven"]["feedback"] if get_mongo_client() else None
+            if not feedback_collection:
+                return "Error de conexión a la base de datos", 503
+                
         try:
-            comentarios = list(feedback_collection.find().sort('fecha', -1))
+            page = int(request.args.get('page', 1))
+            per_page = 10
             
+            # Consulta con paginación
+            total = feedback_collection.count_documents({})
+            comentarios = list(feedback_collection.find()
+                             .sort('fecha', -1)
+                             .skip((page-1)*per_page)
+                             .limit(per_page))
+            
+            # Procesamiento seguro de datos
+            comentarios_serializados = []
             for comentario in comentarios:
-                comentario['_id'] = str(comentario['_id'])
+                comentario['_id'] = str(comentario.get('_id', ''))
+                comentarios_serializados.append(comentario)
             
-            distribucion_estrellas = [0, 0, 0, 0, 0]
-            total_comentarios = len(comentarios)
-            suma_valoraciones = sum(c['valoracion'] for c in comentarios if 1 <= c['valoracion'] <= 5)
-            
-            for comentario in comentarios:
-                valoracion = comentario['valoracion']
-                if 1 <= valoracion <= 5:
-                    distribucion_estrellas[valoracion-1] += 1
-            
-            promedio_general = round(suma_valoraciones / total_comentarios, 1) if total_comentarios > 0 else 0
+            # Estadísticas con agregación de MongoDB
+            pipeline = [
+                {'$group': {
+                    '_id': None,
+                    'total': {'$sum': 1},
+                    'avg_rating': {'$avg': '$valoracion'},
+                    'rating_dist': {
+                        '$push': {
+                            'rating': '$valoracion'
+                        }
+                    }
+                }}
+            ]
+            stats = next(feedback_collection.aggregate(pipeline), {})
             
             return render_template(
                 'admin comentarios.html',
-                comentarios=comentarios,
-                distribucion_estrellas=distribucion_estrellas,
-                promedio_general=promedio_general,
-                total_comentarios=total_comentarios
+                comentarios=comentarios_serializados,
+                distribucion_estrellas=get_rating_distribution(stats.get('rating_dist', [])),
+                promedio_general=round(stats.get('avg_rating', 0), 1),
+                total_comentarios=stats.get('total', 0),
+                pagination={
+                    'page': page,
+                    'per_page': per_page,
+                    'total': total,
+                    'pages': (total // per_page) + (1 if total % per_page else 0)
+                }
             )
-                                
         except Exception as e:
-            print(f"Error inesperado: {e}")
-            return f"Error inesperado: {str(e)}", 500
+            app.logger.error(f"Error en admin: {str(e)}")
+            return "Error interno del servidor", 500
+
+    def get_rating_distribution(ratings):
+        dist = [0, 0, 0, 0, 0]
+        for r in ratings:
+            rating = r.get('rating', 0)
+            if 1 <= rating <= 5:
+                dist[rating-1] += 1
+        return dist
 
     return app
 
-# Crear la aplicación
+# Configuración para producción
 app = create_app()
 
-# Configuración para ejecución local
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=False)
