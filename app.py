@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from urllib.parse import quote_plus
 import os
 
-def create_app():
+aplication = create_app()
     # Cargar variables de entorno
     load_dotenv()
 
@@ -153,3 +153,4 @@ app = create_app()
 # Configuración para ejecución local
 if __name__ == '__main__':
     app.run()
+
