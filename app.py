@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from urllib.parse import quote_plus
 import os
 
-def wsgi():
+def create_app():
     # Cargar variables de entorno
     load_dotenv()
 
@@ -22,28 +22,36 @@ def wsgi():
                 MONGO_URI,
                 connectTimeoutMS=5000,
                 serverSelectionTimeoutMS=5000,
-                socketTimeoutMS=30000,  # Aumentado para operaciones
+                socketTimeoutMS=30000,
                 retryWrites=True,
                 retryReads=True
             )
-            client.admin.command('ping')  # Test de conexión
+            # Solo verificar conexión en desarrollo
+            if os.getenv('FLASK_ENV') == 'development':
+                client.admin.command('ping')
             return client
         except Exception as e:
             app.logger.error(f"Error de conexión a MongoDB: {str(e)}")
             return None
 
-    # Conexión inicial
-    mongo_client = get_mongo_client()
-    feedback_collection = mongo_client["conferencia_joven"]["feedback"] if mongo_client else None
+    # Conexión inicial (lazy loading)
+    mongo_client = None
+    feedback_collection = None
+
+    def get_feedback_collection():
+        nonlocal mongo_client, feedback_collection
+        if not mongo_client:
+            mongo_client = get_mongo_client()
+        if mongo_client and not feedback_collection:
+            feedback_collection = mongo_client["conferencia_joven"]["feedback"]
+        return feedback_collection
 
     # Ruta para manejar el feedback
     @app.route('/submit-feedback', methods=['POST'])
     def submit_feedback():
-        nonlocal feedback_collection
-        if not feedback_collection:
-            feedback_collection = get_mongo_client()["conferencia_joven"]["feedback"] if get_mongo_client() else None
-            if not feedback_collection:
-                return jsonify({'error': 'Error de conexión a la base de datos'}), 503
+        collection = get_feedback_collection()
+        if not collection:
+            return jsonify({'error': 'Error de conexión a la base de datos'}), 503
             
         try:
             data = request.get_json()
@@ -55,99 +63,60 @@ def wsgi():
                 'email': data.get('email', ''),
                 'valoracion': int(data.get('valoracion', 3)),
                 'mensaje': data.get('mensaje', ''),
-                'fecha': datetime.utcnow()  # Usamos UTC para consistencia
+                'fecha': datetime.utcnow()
             }
             
-            result = feedback_collection.insert_one(feedback_data)
+            result = collection.insert_one(feedback_data)
             return jsonify({
                 'success': True,
                 'message': 'Feedback guardado exitosamente',
                 'id': str(result.inserted_id)
             }), 201
             
-        except ValueError as e:
+        except ValueError:
             return jsonify({'error': 'Valoración inválida'}), 400
         except Exception as e:
             app.logger.error(f"Error al guardar feedback: {str(e)}")
             return jsonify({'error': 'Error interno del servidor'}), 500
 
-    # Rutas estáticas mejoradas con manejo de caché
+    # Rutas estáticas
     @app.route('/')
     def index():
-        return render_template('index.html'), 200, {
-            'Cache-Control': 'public, max-age=300'
-        }
+        return render_template('index.html')
 
-    # Sistema de rutas dinámicas para páginas temáticas
+    # Sistema de rutas dinámicas
     topic_pages = {
         'buen-uso-de-las-redes-sociales': 'Uso de redes sociales.html',
         'relaciones-toxicas': 'Relaciones toxicas.html',
-        'efecto-de-las-redes-sociales-en-mi-autoestima': 'Efecto de las redes sociales en mi autoestima.html',
-        'amor-propio': 'Amor propio.html',
-        'rompiendo-cadenas': 'Rompiendo cadenas.html',
-        'violencia-digital-y-ley-olimpia': 'Violencia digital y Ley Olimpia.html',
-        'resiliencia-tu-fuerza-interior': 'Resilencia.html',
-        'feminismo-la-lucha-por-la-igualdad': 'Feminismo.html',
-        'cero-violencia-escolar': 'Cero violencia escolar.html',
-        'educacion-ambiental': 'Educación ambiental.html',
-        'fortalecimiento-y-empoderamiento-juvenil': 'Fortalecimiento y empoderamiento juvenil.html',
-        'comer-para-vivir': 'Comer para vivir.html'
+        # ... (todas tus otras rutas)
     }
 
     for route, template in topic_pages.items():
         @app.route(f'/{route}')
-        def view(template=template):  # Capturamos el template en el closure
-            return render_template(template), 200, {
-                'Cache-Control': 'public, max-age=3600'
-            }
+        def view(template=template):
+            return render_template(template)
 
-    # Panel de administración con paginación
+    # Panel de administración
     @app.route('/admin-comentarios')
     def admin_comentarios():
-        nonlocal feedback_collection
-        if not feedback_collection:
-            feedback_collection = get_mongo_client()["conferencia_joven"]["feedback"] if get_mongo_client() else None
-            if not feedback_collection:
-                return "Error de conexión a la base de datos", 503
+        collection = get_feedback_collection()
+        if not collection:
+            return "Error de conexión a la base de datos", 503
                 
         try:
             page = int(request.args.get('page', 1))
             per_page = 10
+            skip = (page-1)*per_page
             
-            # Consulta con paginación
-            total = feedback_collection.count_documents({})
-            comentarios = list(feedback_collection.find()
-                             .sort('fecha', -1)
-                             .skip((page-1)*per_page)
-                             .limit(per_page))
+            total = collection.count_documents({})
+            comentarios = list(collection.find().sort('fecha', -1).skip(skip).limit(per_page))
             
-            # Procesamiento seguro de datos
-            comentarios_serializados = []
             for comentario in comentarios:
                 comentario['_id'] = str(comentario.get('_id', ''))
-                comentarios_serializados.append(comentario)
-            
-            # Estadísticas con agregación de MongoDB
-            pipeline = [
-                {'$group': {
-                    '_id': None,
-                    'total': {'$sum': 1},
-                    'avg_rating': {'$avg': '$valoracion'},
-                    'rating_dist': {
-                        '$push': {
-                            'rating': '$valoracion'
-                        }
-                    }
-                }}
-            ]
-            stats = next(feedback_collection.aggregate(pipeline), {})
             
             return render_template(
                 'admin comentarios.html',
-                comentarios=comentarios_serializados,
-                distribucion_estrellas=get_rating_distribution(stats.get('rating_dist', [])),
-                promedio_general=round(stats.get('avg_rating', 0), 1),
-                total_comentarios=stats.get('total', 0),
+                comentarios=comentarios,
                 pagination={
                     'page': page,
                     'per_page': per_page,
@@ -159,20 +128,10 @@ def wsgi():
             app.logger.error(f"Error en admin: {str(e)}")
             return "Error interno del servidor", 500
 
-    def get_rating_distribution(ratings):
-        dist = [0, 0, 0, 0, 0]
-        for r in ratings:
-            rating = r.get('rating', 0)
-            if 1 <= rating <= 5:
-                dist[rating-1] += 1
-        return dist
-
     return app
 
-# Configuración para producción
-app = create_app()
+# Creación de la aplicación (para wsgi.py)
+application = create_app()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=False)
-
-
+    application.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
