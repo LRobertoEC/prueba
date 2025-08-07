@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 from urllib.parse import quote_plus
 import os
 
-aplication = create_app()
-    # Cargar variables de entorno
+def create_app():
+    # Cargar variables de entorno (CORRECCIÓN: esta línea estaba mal indentada)
     load_dotenv()
 
     app = Flask(__name__)
@@ -145,12 +145,10 @@ aplication = create_app()
             print(f"Error inesperado: {e}")
             return f"Error inesperado: {str(e)}", 500
 
-    return app
+    return app  # Esto debe estar al final de la función create_app
 
-# Crear la aplicación
-app = create_app()
+# CORRECCIÓN: La instancia debe crearse después de definir create_app
+application = create_app()  # Cambiado de 'aplication' a 'application'
 
-# Configuración para ejecución local
 if __name__ == '__main__':
-    app.run()
-
+    application.run()
