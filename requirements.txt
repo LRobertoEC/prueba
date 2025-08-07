@@ -1,5 +1,6 @@
-Flask==2.0.1
-pymongo==4.3.3
-python-dotenv==0.19.2
-gunicorn==20.1.0
-dnspython==2.3.0
+Flask==2.3.2
+pymongo==4.6.2
+python-dotenv==1.0.0
+gunicorn==21.2.0
+dnspython==2.4.2
+Werkzeug==2.3.7  # Versión específica compatible con Flask 2.x
